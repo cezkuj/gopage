@@ -46,5 +46,6 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 		Handler:      serveMux,
 	}
+	test_db()
 	log.Println(srv.ListenAndServe())
 }
