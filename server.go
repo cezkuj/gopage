@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/gorilla/mux"
 	"io"
 	"log"
@@ -58,8 +59,27 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 }
 func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		log.Println(r.Form["username"], r.Form["password"])
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		log.Println(buf.String())
+		err := r.ParseForm()
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(r.Form)
+	}
+}
+func register(env Env) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		log.Println(buf.String())
+
+		err := r.ParseForm()
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(r.Form)
 	}
 }
 func HelloServer(w http.ResponseWriter, r *http.Request) {
@@ -80,21 +100,24 @@ func main() {
 		log.Fatal(err)
 	}
 	env := Env{db: db}
-	token, err := env.loginUser("admin", "secr3t")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(token)
-	auth, err := env.authenticateUser("admin", token)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(auth)
+	/*
+		token, err := env.loginUser("admin", "secr3t")
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(token)
+		auth, err := env.authenticateUser("admin", token)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(auth)
+	*/
 	router := mux.NewRouter()
 	router.HandleFunc("/", HelloServer)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
 	router.HandleFunc("/authenticate", authenticate(env))
-	//serveMux.HandleFunc("/login", login(env)).Methods("POST")
+	router.HandleFunc("/login", login(env)).Methods("POST")
+	router.HandleFunc("/register", register(env)).Methods("POST")
 	serveMux := &http.ServeMux{}
 	serveMux.Handle("/", router)
 	srv := &http.Server{
