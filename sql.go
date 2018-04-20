@@ -2,6 +2,7 @@ package main
 
 import (
 	//"database/sql"
+	"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"log"
@@ -37,13 +38,16 @@ func test_db() {
 		log.Fatal(err)
 	}
 	log.Println("INSERTED")
-        people := []Person{}
+	people := []Person{}
 	err = db.Select(&people, "SELECT * FROM people")
-        if err != nil {
-                log.Fatal(err)
-        }
-
-        log.Println(people)
+	if err != nil {
+		log.Fatal(err)
+	}
+	js, err := json.Marshal(people)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(js))
 	for i, person := range people {
 		log.Println(i, person)
 	}
