@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-type Env struct{}
-
 const (
 	cdnReact           = "https://cdnjs.cloudflare.com/ajax/libs/react/15.5.4/react.min.js"
 	cdnReactDom        = "https://cdnjs.cloudflare.com/ajax/libs/react/15.5.4/react-dom.min.js"
@@ -76,7 +74,16 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
 func main() {
-	env := Env{}
+	db, err := initDb()
+	if err != nil {
+		log.Fatal(err)
+	}
+	env := Env{db: db}
+	token, err := env.registerUser("admin", "secr3t")
+	log.Println(token)
+	if err != nil {
+		log.Fatal(err)
+	}
 	serveMux := &http.ServeMux{}
 	serveMux.HandleFunc("/", HelloServer)
 	serveMux.Handle("/js/", http.FileServer(http.Dir("assets")))
@@ -88,6 +95,5 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 		Handler:      serveMux,
 	}
-	//test_db()
 	log.Println(srv.ListenAndServe())
 }
