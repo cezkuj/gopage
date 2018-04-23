@@ -84,6 +84,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	token, err = env.loginUser("admin", "secr3t")
+	log.Println(token)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	token, err = env.loginUser("admin", "secret")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(token)
 	serveMux := &http.ServeMux{}
 	serveMux.HandleFunc("/", HelloServer)
 	serveMux.Handle("/js/", http.FileServer(http.Dir("assets")))

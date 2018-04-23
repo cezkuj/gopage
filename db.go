@@ -49,17 +49,33 @@ func (env Env) registerUser(username, password string) (string, error) {
 	if len(users) != 0 {
 		return "", errors.New("RegisterError: User is already present")
 	} else {
-		now := time.Now()
-		token := randSeq(32)
-		_, err = env.db.Exec("INSERT INTO users (username, hash, token, validity) VALUES (?, ?, ?, ?)", username, getSHA1Hash(password), token, strings.Join([]string{strconv.Itoa(now.Day()), now.Month().String(), strconv.Itoa(now.Year())}, " "))
+		token, validity := newTokenAndValidity()
+		_, err = env.db.Exec("INSERT INTO users (username, hash, token, validity) VALUES (?, ?, ?, ?)", username, getSHA1Hash(password), token, validity)
 		return token, err
 	}
 
 }
 
 func (env Env) loginUser(username, password string) (string, error) {
+	users := []User{}
+	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	if err != nil {
+		return "", err
+	}
+	if len(users) != 1 {
+		return "", errors.New("LoginError: User is not registered")
+	}
+	user := users[0]
+	if getSHA1Hash(password) == user.Hash {
 
-	return "", nil
+		token, validity := newTokenAndValidity()
+		_, err = env.db.Exec("UPDATE users SET token=?, validity=?", token, validity)
+		if err != nil {
+			return "", nil
+		}
+		return token, nil
+	}
+	return "", errors.New("LoginError: Password is invalid")
 }
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -79,4 +95,10 @@ func getSHA1Hash(text string) string {
 	hasher := sha1.New()
 	hasher.Write([]byte(text))
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func newTokenAndValidity() (string, string) {
+	now := time.Now()
+	token := randSeq(32)
+	return token, strings.Join([]string{strconv.Itoa(now.Day()), now.Month().String(), strconv.Itoa(now.Year())}, " ")
 }
