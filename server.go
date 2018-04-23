@@ -32,7 +32,13 @@ const indexHTML = `
 </html>
 `
 
-func HelloServer(w http.ResponseWriter, req *http.Request) {
+func HelloServer(w http.ResponseWriter, r *http.Request) {
+	expiration := time.Now().Add(365 * 24 * time.Hour)
+	cookie := http.Cookie{Name: "username", Value: "cezkuj", Expires: expiration}
+	http.SetCookie(w, &cookie)
+	for _, cookie := range r.Cookies() {
+		log.Println(w, cookie.Name)
+	}
 	io.WriteString(w, indexHTML)
 }
 func main() {
@@ -46,6 +52,6 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 		Handler:      serveMux,
 	}
-	test_db()
+	//test_db()
 	log.Println(srv.ListenAndServe())
 }
