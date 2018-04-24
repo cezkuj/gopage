@@ -55,23 +55,23 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, "Not authenticated")
 			return
 		}
-		if userPresent {
-			log.Println("user present")
-			authenticated, err := env.authenticateUser(username.Value, Token(token.Value))
-			if err != nil {
-				log.Println(err)
-				io.WriteString(w, "Not authenticated")
-				return
-			}
-			if !authenticated {
-				io.WriteString(w, "Not authenticated")
-			} else {
-				io.WriteString(w, "Authenticated")
-			}
-		} else {
+		if !userPresent {
 			io.WriteString(w, "Not authenticated")
 			log.Println("user not present", username.Value)
+			return
+
 		}
+		authenticated, err := env.authenticateUser(username.Value, Token(token.Value))
+		if err != nil {
+			log.Println(err)
+			io.WriteString(w, "Not authenticated")
+			return
+		}
+		if !authenticated {
+			io.WriteString(w, "Not authenticated")
+			return
+		}
+		io.WriteString(w, "Authenticated")
 
 	}
 }
@@ -89,23 +89,26 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		if userPresent {
-			if passwordCorrect, _ := env.passwordIsCorrect(username, password); passwordCorrect {
-				token, err := env.updateToken(username)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				log.Println("Set cookies")
-				setCookies(w, username, token)
+		if !userPresent {
 
-			} else {
-				log.Println("Password is not correct")
-			}
-
-		} else {
 			log.Println("User not present")
+			return
 		}
+		passwordCorrect, err := env.passwordIsCorrect(username, password)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if !passwordCorrect {
+			log.Println("Password not correct")
+		}
+		token, err := env.updateToken(username)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println("Set cookies")
+		setCookies(w, username, token)
 
 	}
 }
@@ -125,21 +128,20 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 		}
 		if userPresent {
 			log.Println("User present")
-		} else {
-			token, err := env.createUser(username, password)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			log.Println("User created ", token)
-			setCookies(w, username, token)
-
+			return
 		}
+		token, err := env.createUser(username, password)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println("User created ", token)
+		setCookies(w, username, token)
 
 	}
 
 }
-func HelloServer(w http.ResponseWriter, r *http.Request) {
+func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
 func main() {
@@ -148,20 +150,8 @@ func main() {
 		log.Fatal(err)
 	}
 	env := Env{db: db}
-	/*
-		token, err := env.loginUser("admin", "secr3t")
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println(token)
-		auth, err := env.authenticateUser("admin", token)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println(auth)
-	*/
 	router := mux.NewRouter()
-	router.HandleFunc("/", HelloServer)
+	router.HandleFunc("/", Index)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
 	router.HandleFunc("/authenticate", authenticate(env))
 	router.HandleFunc("/login", login(env)).Methods("POST")
