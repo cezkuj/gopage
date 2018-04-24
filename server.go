@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/mux"
 	"io"
 	"log"
 	"net/http"
@@ -32,11 +33,6 @@ const indexHTML = `
 </html>
 `
 
-func (env Env) isAuthenticated(username, token string) (bool, error) {
-	log.Println(username, token)
-	return true, nil
-
-}
 func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, err := r.Cookie("username")
@@ -51,7 +47,7 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Println(username.Value, token.Value)
-		authenticated, err := env.isAuthenticated(username.Value, token.Value)
+		authenticated, err := env.authenticateUser(username.Value, token.Value)
 		if !authenticated || err != nil {
 			io.WriteString(w, "Not authenticated")
 		} else {
@@ -60,7 +56,12 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 
 	}
 }
-
+func login(env Env) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		log.Println(r.Form["username"], r.Form["password"])
+	}
+}
 func HelloServer(w http.ResponseWriter, r *http.Request) {
 	nextDay := time.Now().Add(24 * time.Hour)
 	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
@@ -79,26 +80,23 @@ func main() {
 		log.Fatal(err)
 	}
 	env := Env{db: db}
-	token, err := env.registerUser("admin", "secr3t")
-	log.Println(token)
-	if err != nil {
-		log.Fatal(err)
-	}
-	token, err = env.loginUser("admin", "secr3t")
-	log.Println(token)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	token, err = env.loginUser("admin", "secret")
+	token, err := env.loginUser("admin", "secr3t")
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println(token)
+	auth, err := env.authenticateUser("admin", token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(auth)
+	router := mux.NewRouter()
+	router.HandleFunc("/", HelloServer)
+	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
+	router.HandleFunc("/authenticate", authenticate(env))
+	//serveMux.HandleFunc("/login", login(env)).Methods("POST")
 	serveMux := &http.ServeMux{}
-	serveMux.HandleFunc("/", HelloServer)
-	serveMux.Handle("/js/", http.FileServer(http.Dir("assets")))
-	serveMux.HandleFunc("/authenticate", authenticate(env))
+	serveMux.Handle("/", router)
 	srv := &http.Server{
 		Addr:         ":8000",
 		ReadTimeout:  5 * time.Second,

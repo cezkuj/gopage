@@ -77,6 +77,22 @@ func (env Env) loginUser(username, password string) (string, error) {
 	}
 	return "", errors.New("LoginError: Password is invalid")
 }
+func (env Env) authenticateUser(username, token string) (bool, error) {
+	users := []User{}
+	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	if err != nil {
+		return false, err
+	}
+	if len(users) != 1 {
+		return false, errors.New("LoginError: User is not registered")
+	}
+	user := users[0]
+	if user.Token == token {
+		return true, nil
+	}
+	return false, nil
+
+}
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
