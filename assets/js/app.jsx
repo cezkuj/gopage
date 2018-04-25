@@ -30,6 +30,7 @@ class Index extends React.Component {
         "password": this.state.password,
       })
       .then(res => {
+        alert(JSON.stringify(res.data));
         this.authenticate();
       })
       .catch(error => {
