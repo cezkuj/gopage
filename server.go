@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"io"
 	"log"
@@ -38,60 +39,107 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, err := r.Cookie("username")
 		if err != nil {
+			log.Println(err)
 			io.WriteString(w, "Not authenticated")
 			return
 		}
 		token, err := r.Cookie("token")
 		if err != nil {
+			log.Println(err)
 			io.WriteString(w, "Not authenticated")
 			return
 		}
-
-		log.Println(username.Value, token.Value)
-		authenticated, err := env.authenticateUser(username.Value, token.Value)
-		if !authenticated || err != nil {
+		userPresent, err := env.userIsPresent(username.Value)
+		if err != nil {
+			log.Println(err)
 			io.WriteString(w, "Not authenticated")
+			return
+		}
+		if userPresent {
+			log.Println("user present")
+			authenticated, err := env.authenticateUser(username.Value, Token(token.Value))
+			if err != nil {
+				log.Println(err)
+				io.WriteString(w, "Not authenticated")
+				return
+			}
+			if !authenticated {
+				io.WriteString(w, "Not authenticated")
+			} else {
+				io.WriteString(w, "Authenticated")
+			}
 		} else {
-			io.WriteString(w, "Authenticated")
+			io.WriteString(w, "Not authenticated")
+			log.Println("user not present", username.Value)
 		}
 
 	}
 }
 func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
-		log.Println(buf.String())
-		err := r.ParseForm()
+		dat, err := parseReaderToJson(r.Body)
 		if err != nil {
 			log.Println(err)
+			return
 		}
-		log.Println(r.Form)
+		username := dat["username"]
+		password := dat["password"]
+		userPresent, err := env.userIsPresent(username)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if userPresent {
+			if passwordCorrect, _ := env.passwordIsCorrect(username, password); passwordCorrect {
+				token, err := env.updateToken(username)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				log.Println("Set cookies")
+				setCookies(w, username, token)
+
+			} else {
+				log.Println("Password is not correct")
+			}
+
+		} else {
+			log.Println("User not present")
+		}
+
 	}
 }
 func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
-		log.Println(buf.String())
-
-		err := r.ParseForm()
+		dat, err := parseReaderToJson(r.Body)
 		if err != nil {
 			log.Println(err)
+			return
 		}
-		log.Println(r.Form)
+		username := dat["username"]
+		password := dat["password"]
+		userPresent, err := env.userIsPresent(username)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if userPresent {
+			log.Println("User present")
+		} else {
+			token, err := env.createUser(username, password)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			log.Println("User created ", token)
+			setCookies(w, username, token)
+
+		}
+
 	}
+
 }
 func HelloServer(w http.ResponseWriter, r *http.Request) {
-	nextDay := time.Now().Add(24 * time.Hour)
-	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
-	cookieUsername := http.Cookie{Name: "username", Value: "cezkuj", Expires: midnight}
-	cookieToken := http.Cookie{Name: "token", Value: "secr3t", Expires: midnight}
-	http.SetCookie(w, &cookieUsername)
-	http.SetCookie(w, &cookieToken)
-	for _, cookie := range r.Cookies() {
-		log.Println(w, cookie.Name)
-	}
 	io.WriteString(w, indexHTML)
 }
 func main() {
@@ -128,4 +176,20 @@ func main() {
 		Handler:      serveMux,
 	}
 	log.Println(srv.ListenAndServe())
+}
+func parseReaderToJson(reader io.Reader) (map[string]string, error) {
+	var dat map[string]string
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(reader)
+	err := json.Unmarshal(buf.Bytes(), &dat)
+	return dat, err
+}
+func setCookies(w http.ResponseWriter, username string, token Token) {
+	nextDay := time.Now().Add(24 * time.Hour)
+	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
+	cookieUsername := http.Cookie{Name: "username", Value: username, Expires: midnight}
+	cookieToken := http.Cookie{Name: "token", Value: string(token), Expires: midnight}
+	http.SetCookie(w, &cookieUsername)
+	http.SetCookie(w, &cookieToken)
+
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"errors"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	//"log"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"time"
 )
+
+type Token string
 
 type Env struct {
 	db *sqlx.DB
@@ -39,52 +40,45 @@ func initDb() (*sqlx.DB, error) {
 	return db, nil
 
 }
-
-func (env Env) registerUser(username, password string) (string, error) {
+func (env Env) userIsPresent(username string) (bool, error) {
 	users := []User{}
 	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
-	if err != nil {
-		return "", err
-	}
 	if len(users) != 0 {
-		return "", errors.New("RegisterError: User is already present")
-	} else {
-		token, validity := newTokenAndValidity()
-		_, err = env.db.Exec("INSERT INTO users (username, hash, token, validity) VALUES (?, ?, ?, ?)", username, getSHA1Hash(password), token, validity)
-		return token, err
+		return true, err
 	}
+	return false, err
+}
+func (env Env) createUser(username, password string) (Token, error) {
+	token, validity := newTokenAndValidity()
+	_, err := env.db.Exec("INSERT INTO users (username, hash, token, validity) VALUES (?, ?, ?, ?)", username, getSHA1Hash(password), token, validity)
+	return token, err
 
 }
-
-func (env Env) loginUser(username, password string) (string, error) {
-	users := []User{}
-	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
-	if err != nil {
-		return "", err
-	}
-	if len(users) != 1 {
-		return "", errors.New("LoginError: User is not registered")
-	}
-	user := users[0]
-	if getSHA1Hash(password) == user.Hash {
-
-		token, validity := newTokenAndValidity()
-		_, err = env.db.Exec("UPDATE users SET token=?, validity=?", token, validity)
-		if err != nil {
-			return "", nil
-		}
-		return token, nil
-	}
-	return "", errors.New("LoginError: Password is invalid")
-}
-func (env Env) authenticateUser(username, token string) (bool, error) {
+func (env Env) passwordIsCorrect(username, password string) (bool, error) {
 	users := []User{}
 	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
 	if err != nil {
 		return false, err
 	}
-	if len(users) != 1 {
-		return false, errors.New("LoginError: User is not registered")
+	user := users[0]
+	if getSHA1Hash(password) == user.Hash {
+		return true, nil
+	}
+
+	return false, nil
+
+}
+func (env Env) updateToken(username string) (Token, error) {
+	token, validity := newTokenAndValidity()
+	_, err := env.db.Exec("UPDATE users SET token=?, validity=? where username=?", token, validity, username)
+	return token, err
+
+}
+func (env Env) authenticateUser(username string, token Token) (bool, error) {
+	users := []User{}
+	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	if err != nil {
+		return false, err
 	}
 	user := users[0]
 	if user.Token == token {
@@ -113,8 +107,8 @@ func getSHA1Hash(text string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func newTokenAndValidity() (string, string) {
+func newTokenAndValidity() (Token, string) {
 	now := time.Now()
-	token := randSeq(32)
+	token := Token(randSeq(32))
 	return token, strings.Join([]string{strconv.Itoa(now.Day()), now.Month().String(), strconv.Itoa(now.Year())}, " ")
 }
