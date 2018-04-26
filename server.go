@@ -92,8 +92,7 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !userPresent {
-
-			log.Println("User not present")
+			io.WriteString(w, "User is not present")
 			return
 		}
 		passwordCorrect, err := env.passwordIsCorrect(username, password)
@@ -102,15 +101,15 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !passwordCorrect {
-			log.Println("Password not correct")
+			io.WriteString(w, "Password is not correct")
 		}
 		token, err := env.updateToken(username)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		log.Println("Set cookies")
 		setCookies(w, username, token)
+                io.WriteString(w, "Logging in")
 
 	}
 }
@@ -129,7 +128,7 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if userPresent {
-			log.Println("User present")
+			io.WriteString(w, "User is already present")
 			return
 		}
 		token, err := env.createUser(username, password)
@@ -137,7 +136,7 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		log.Println("User created ", token)
+		io.WriteString(w, "User created")
 		setCookies(w, username, token)
 
 	}

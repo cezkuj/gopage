@@ -36,6 +36,7 @@ class Index extends React.Component {
         }
     })
       .then(res => {
+        alert(JSON.stringify(res.data));
         this.authenticate();
       })
       .catch(error => {
