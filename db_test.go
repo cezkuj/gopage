@@ -12,11 +12,25 @@ func dropDb(table_name string) {
 	}
 	db.Exec("DROP TABLE " + table_name)
 }
-func TestInitDb(t *testing.T) {
+func setUp() Env {
 	dropDb(table_name)
 	db, err := initDb(table_name)
 	if err != nil {
 		log.Fatal(err)
+	}
+	return Env{db: db}
+
+}
+func test(got interface{}, want interface{}, t *testing.T) {
+	if got != want {
+		t.Errorf("got '%s', want '%s'", got, want)
+	}
+}
+func TestInitDb(t *testing.T) {
+	dropDb(table_name)
+	db, err := initDb(table_name)
+	if err != nil {
+		t.Error(err)
 	}
 	tables := []string{}
 	db.Select(&tables, "SHOW TABLES")
@@ -25,13 +39,18 @@ func TestInitDb(t *testing.T) {
 			return
 		}
 	}
-	log.Fatal("TestInitDB FAILED - Table not found")
+	t.Errorf("TestInitDB FAILED - Table not found")
 
 }
-func TestUserIsPresent(t *testing.T) {
-
-}
-func TestCreateUser(t *testing.T) {
+func TestUserIsPresentAndCreateUser(t *testing.T) {
+	env := setUp()
+	test_user := "test_abc"
+	got, err := env.userIsPresent(test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	want := false
+	test(got, want, t)
 
 }
 func TestPasswordIsCorrect(t *testing.T) {
