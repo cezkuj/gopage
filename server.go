@@ -146,7 +146,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
 func main() {
-	db, err := initDb("users")
+	db, err := initDb("django:djangopass@tcp(127.0.0.1:3306)/homepage")
 	if err != nil {
 		log.Fatal(err)
 	}

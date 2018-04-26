@@ -18,15 +18,15 @@ type Env struct {
 	db *sqlx.DB
 }
 
-func initDb(table string) (*sqlx.DB, error) {
+func initDb(db_connection string) (*sqlx.DB, error) {
 	db, err := sqlx.Open("mysql",
-		"django:djangopass@tcp(127.0.0.1:3306)/homepage")
+		db_connection)
 
 	if err != nil {
 		return nil, err
 	}
 	createTable := `
-          CREATE TABLE IF NOT EXISTS ` + table + ` (
+          CREATE TABLE IF NOT EXISTS users (
           id SERIAL NOT NULL PRIMARY KEY,
           username TEXT NOT NULL,
           hash TEXT NOT NULL,

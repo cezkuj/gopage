@@ -3,18 +3,21 @@ package main
 import "log"
 import "testing"
 
-const table_name = "users_test"
+const (
+	db_connection = "django:djangopass@tcp(127.0.0.1:3306)/homepage"
+	table_name    = "users"
+)
 
-func dropDb(table_name string) {
-	db, err := initDb(table_name)
+func dropTable(table_name string) {
+	db, err := initDb(db_connection)
 	if err != nil {
 		log.Fatal(err)
 	}
 	db.Exec("DROP TABLE " + table_name)
 }
 func setUp() Env {
-	dropDb(table_name)
-	db, err := initDb(table_name)
+	dropTable(table_name)
+	db, err := initDb(db_connection)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,8 +30,8 @@ func test(got interface{}, want interface{}, t *testing.T) {
 	}
 }
 func TestInitDb(t *testing.T) {
-	dropDb(table_name)
-	db, err := initDb(table_name)
+	dropTable(table_name)
+	db, err := initDb(db_connection)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,6 +53,22 @@ func TestUserIsPresentAndCreateUser(t *testing.T) {
 		t.Error(err)
 	}
 	want := false
+	test(got, want, t)
+	_, err = env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	got, err = env.userIsPresent(test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	want = true
+	test(got, want, t)
+	got, err = env.userIsPresent("abc")
+	if err != nil {
+		t.Error(err)
+	}
+	want = false
 	test(got, want, t)
 
 }
