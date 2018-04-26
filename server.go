@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
-        "github.com/gorilla/csrf"
 	"io"
 	"log"
 	"net/http"
@@ -38,7 +38,7 @@ const indexHTML = `
 
 func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("X-CSRF-Token", csrf.Token(r))
+		w.Header().Set("X-CSRF-Token", csrf.Token(r))
 		username, err := r.Cookie("username")
 		if err != nil {
 			log.Println(err)
@@ -109,7 +109,7 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		setCookies(w, username, token)
-                io.WriteString(w, "Logging in")
+		io.WriteString(w, "Logging in")
 
 	}
 }
@@ -146,12 +146,12 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
 func main() {
-	db, err := initDb()
+	db, err := initDb("users")
 	if err != nil {
 		log.Fatal(err)
 	}
 	env := Env{db: db}
-        CSRF := csrf.Protect([]byte("88D283B4F5882897B13DDE4D422D5"), csrf.Secure(false)) //secure false should be removed while running with TLS
+	CSRF := csrf.Protect([]byte("88D283B4F5882897B13DDE4D422D5"), csrf.Secure(false)) //secure false should be removed while running with TLS
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
