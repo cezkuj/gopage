@@ -4,7 +4,7 @@ class Index extends React.Component {
     this.handleChange = this.handleChange.bind(this);
     this.handleSend = this.handleSend.bind(this);
     this.authenticate = this.authenticate.bind(this);
-    this.state = {username: '', password: '', authenticated: false};
+    this.state = {username: '', password: '', authenticated: false, csrf: ''};
   }
   componentDidMount(){
    this.authenticate();
@@ -12,6 +12,7 @@ class Index extends React.Component {
   authenticate(){
     axios.get('/authenticate')
       .then(res => {
+        this.setState({csrf: res.headers['x-csrf-token']});
         if(res.data == 'Authenticated'){
           this.setState({authenticated: true});
         }
@@ -28,7 +29,12 @@ class Index extends React.Component {
     axios.post('/' + event.target.name, {
         "username": this.state.username,
         "password": this.state.password,
-      })
+      }, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': this.state.csrf,
+        }
+    })
       .then(res => {
         this.authenticate();
       })

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/gorilla/mux"
+        "github.com/gorilla/csrf"
 	"io"
 	"log"
 	"net/http"
@@ -37,6 +38,7 @@ const indexHTML = `
 
 func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("X-CSRF-Token", csrf.Token(r))
 		username, err := r.Cookie("username")
 		if err != nil {
 			log.Println(err)
@@ -150,6 +152,7 @@ func main() {
 		log.Fatal(err)
 	}
 	env := Env{db: db}
+        CSRF := csrf.Protect([]byte("88D283B4F5882897B13DDE4D422D5"), csrf.Secure(false)) //secure false should be removed while running with TLS
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
@@ -157,7 +160,7 @@ func main() {
 	router.HandleFunc("/login", login(env)).Methods("POST")
 	router.HandleFunc("/register", register(env)).Methods("POST")
 	serveMux := &http.ServeMux{}
-	serveMux.Handle("/", router)
+	serveMux.Handle("/", CSRF(router))
 	srv := &http.Server{
 		Addr:         ":8000",
 		ReadTimeout:  5 * time.Second,
@@ -176,7 +179,7 @@ func parseReaderToJson(reader io.Reader) (map[string]string, error) {
 }
 func setCookies(w http.ResponseWriter, username string, token Token) {
 	nextDay := time.Now().Add(24 * time.Hour)
-	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location())
+	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location()) //Sets time to midnight of the next day
 	cookieUsername := http.Cookie{Name: "username", Value: username, Expires: midnight}
 	cookieToken := http.Cookie{Name: "token", Value: string(token), Expires: midnight}
 	http.SetCookie(w, &cookieUsername)
