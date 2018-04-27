@@ -40,10 +40,25 @@ func initDb(db_connection string) (*sqlx.DB, error) {
 	return db, nil
 
 }
-func (env Env) userIsPresent(username string) (bool, error) {
+func (env Env) getUsers() ([]User, error) {
+	users := []User{}
+	err := env.db.Select(&users, "SELECT * FROM users")
+	return users, err
+}
+
+func (env Env) getUser(username string) (User, error) {
 	users := []User{}
 	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
 	if len(users) != 0 {
+		return users[0], err
+	}
+	return User{}, err
+}
+
+func (env Env) userIsPresent(username string) (bool, error) {
+	user, err := env.getUser(username)
+	nil_user := User{}
+	if user != nil_user {
 		return true, err
 	}
 	return false, err
@@ -55,16 +70,13 @@ func (env Env) createUser(username, password string) (Token, error) {
 
 }
 func (env Env) passwordIsCorrect(username, password string) (bool, error) {
-	users := []User{}
-	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	user, err := env.getUser(username)
 	if err != nil {
 		return false, err
 	}
-	user := users[0]
 	if getSHA1Hash(password) == user.Hash {
 		return true, nil
 	}
-
 	return false, nil
 
 }
@@ -75,12 +87,10 @@ func (env Env) updateToken(username string) (Token, error) {
 
 }
 func (env Env) authenticateUser(username string, token Token) (bool, error) {
-	users := []User{}
-	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	user, err := env.getUser(username)
 	if err != nil {
 		return false, err
 	}
-	user := users[0]
 	if user.Token == token {
 		return true, nil
 	}

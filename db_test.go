@@ -6,6 +6,7 @@ import "testing"
 const (
 	db_connection = "django:djangopass@tcp(127.0.0.1:3306)/homepage"
 	table_name    = "users"
+	test_user     = "test_abc"
 )
 
 func dropTable(table_name string) {
@@ -15,6 +16,7 @@ func dropTable(table_name string) {
 	}
 	db.Exec("DROP TABLE " + table_name)
 }
+
 func setUp() Env {
 	dropTable(table_name)
 	db, err := initDb(db_connection)
@@ -24,11 +26,13 @@ func setUp() Env {
 	return Env{db: db}
 
 }
+
 func test(got interface{}, want interface{}, t *testing.T) {
 	if got != want {
 		t.Errorf("got '%s', want '%s'", got, want)
 	}
 }
+
 func TestInitDb(t *testing.T) {
 	dropTable(table_name)
 	db, err := initDb(db_connection)
@@ -45,9 +49,46 @@ func TestInitDb(t *testing.T) {
 	t.Errorf("TestInitDB FAILED - Table not found")
 
 }
+func TestGetUser(t *testing.T) {
+	env := setUp()
+	_, err := env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = env.createUser(test_user+"2", test_user+"2")
+	if err != nil {
+		t.Error(err)
+	}
+	user, err := env.getUser(test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	want := test_user
+	got := user.Username
+	test(got, want, t)
+}
+func TestGetUsers(t *testing.T) {
+	env := setUp()
+	_, err := env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = env.createUser(test_user+"2", test_user+"2")
+	if err != nil {
+		t.Error(err)
+	}
+	users, err := env.getUsers()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(users) != 2 {
+		t.Errorf("TestGetUsers failed to invalid amount of users")
+	}
+}
+
 func TestUserIsPresentAndCreateUser(t *testing.T) {
 	env := setUp()
-	test_user := "test_abc"
 	got, err := env.userIsPresent(test_user)
 	if err != nil {
 		t.Error(err)
@@ -72,12 +113,58 @@ func TestUserIsPresentAndCreateUser(t *testing.T) {
 	test(got, want, t)
 
 }
+
 func TestPasswordIsCorrect(t *testing.T) {
+	env := setUp()
+	_, err := env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := true
+	got, err := env.passwordIsCorrect(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	test(got, want, t)
+	want = false
+	got, err = env.passwordIsCorrect(test_user, test_user+"1")
+	if err != nil {
+		t.Error(err)
+	}
+	test(got, want, t)
 
 }
+
 func TestUpdateToken(t *testing.T) {
-
+	env := setUp()
+	_, err := env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	token, err := env.updateToken(test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	user, err := env.getUser(test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	want := token
+	got := user.Token
+	test(got, want, t)
 }
-func TestAuthenticate(t *testing.T) {
 
+func TestAuthenticateUser(t *testing.T) {
+   env := setUp()
+   token, err := env.createUser(test_user, test_user)
+  if err != nil {
+                t.Error(err)
+        }
+  want := true
+  got, err := env.authenticateUser(test_user, token)
+  if err != nil {
+                t.Error(err)
+        }
+  test(got, want, t)
 }
