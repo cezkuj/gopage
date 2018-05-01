@@ -122,6 +122,7 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 		}
 		if !passwordCorrect {
 			io.WriteString(w, "Password is not correct")
+			return
 		}
 		token, err := env.updateToken(username)
 		if err != nil {

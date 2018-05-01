@@ -51,13 +51,13 @@ func TestAuthenticateWithCookie(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	env := setUp()
-	token, err := env.createUser(test_user, test_user)
+	_, err := env.createUser(test_user, test_user)
 	if err != nil {
 		t.Fatal(err)
 	}
 	dat := make(map[string]string)
 	dat["username"] = test_user
-	dat["token"] = string(token)
+	dat["password"] = test_user
 	body, err := json.Marshal(dat)
 	if err != nil {
 		t.Fatal(err)
@@ -79,5 +79,26 @@ func TestLogin(t *testing.T) {
 }
 
 func TestRegister(t *testing.T) {
+	env := setUp()
+	dat := make(map[string]string)
+	dat["username"] = test_user
+	dat["password"] = test_user
+	body, err := json.Marshal(dat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body_reader := bytes.NewReader(body)
+	req, err := http.NewRequest("POST", "/register", body_reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(register(env))
+	handler.ServeHTTP(rr, req)
+	expected := "User created"
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
 
 }
