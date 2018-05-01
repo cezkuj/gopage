@@ -6,6 +6,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	//"log"
+	"errors"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -52,17 +53,18 @@ func (env Env) getUser(username string) (User, error) {
 	if len(users) != 0 {
 		return users[0], err
 	}
-	return User{}, err
+	return User{}, errors.New("There is no user with such username")
 }
 
 func (env Env) userIsPresent(username string) (bool, error) {
-	user, err := env.getUser(username)
-	nil_user := User{}
-	if user != nil_user {
+	users := []User{}
+	err := env.db.Select(&users, "SELECT * FROM users where username=?", username)
+	if len(users) != 0 {
 		return true, err
 	}
 	return false, err
 }
+
 func (env Env) createUser(username, password string) (Token, error) {
 	token, validity := newTokenAndValidity()
 	_, err := env.db.Exec("INSERT INTO users (username, hash, token, validity) VALUES (?, ?, ?, ?)", username, getSHA1Hash(password), token, validity)

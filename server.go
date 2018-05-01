@@ -61,7 +61,7 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-CSRF-Token", csrf.Token(r))
 		username, err := r.Cookie("username")
 		if err != nil {
-			log.Println(err)
+			log.Println("Authentication failure due to " + err.Error())
 			io.WriteString(w, "Not authenticated")
 			return
 		}
@@ -165,6 +165,12 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
+func startProdServer() {
+
+}
+func startDevServer() {
+
+}
 func main() {
 	cfg := parseCfg()
 	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
@@ -198,11 +204,15 @@ func parseReaderToJson(reader io.Reader) (map[string]string, error) {
 	return dat, err
 }
 func setCookies(w http.ResponseWriter, username string, token Token) {
+	cookies := createCookies(username, token)
+	for _, cookie := range cookies {
+		http.SetCookie(w, &cookie)
+	}
+}
+
+func createCookies(username string, token Token) []http.Cookie {
 	nextDay := time.Now().Add(24 * time.Hour)
 	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location()) //Sets time to midnight of the next day
-	cookieUsername := http.Cookie{Name: "username", Value: username, Expires: midnight}
-	cookieToken := http.Cookie{Name: "token", Value: string(token), Expires: midnight}
-	http.SetCookie(w, &cookieUsername)
-	http.SetCookie(w, &cookieToken)
+	return []http.Cookie{http.Cookie{Name: "username", Value: username, Expires: midnight}, http.Cookie{Name: "token", Value: string(token), Expires: midnight}}
 
 }
