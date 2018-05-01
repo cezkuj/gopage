@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/acme/autocert"
 	"io"
 	"log"
 	"net/http"
@@ -166,28 +168,51 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
-func startProdServer() {
-
-}
-func startDevServer() {
-
-}
-func main() {
-	cfg := parseCfg()
-	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
-	if err != nil {
-		log.Fatal(err)
+func startProdServer(env Env) {
+	m := &autocert.Manager{
+		Cache:      autocert.DirCache(".secret"),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist("homepage.ck.com"),
 	}
-	env := Env{db: db}
+
+	tlsConfig := &tls.Config{
+		PreferServerCipherSuites: true,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP256,
+			tls.X25519,
+		},
+		MinVersion: tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		},
+		GetCertificate: m.GetCertificate,
+	}
+	srv := &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		Handler:      m.HTTPHandler(nil),
+	}
+	go func() { log.Fatal(srv.ListenAndServe()) }()
+	CSRF := csrf.Protect([]byte("88D283B4F5882897B13DDE4D422D5"))
+	serveMux := createServeMux(CSRF, env)
+	srvTLS := &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		TLSConfig:    tlsConfig,
+		Handler:      serveMux,
+	}
+	log.Println(srvTLS.ListenAndServeTLS("", ""))
+
+}
+func startDevServer(env Env) {
 	CSRF := csrf.Protect([]byte("88D283B4F5882897B13DDE4D422D5"), csrf.Secure(false)) //secure false should be removed while running with TLS
-	router := mux.NewRouter()
-	router.HandleFunc("/", Index)
-	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
-	router.HandleFunc("/authenticate", authenticate(env))
-	router.HandleFunc("/login", login(env)).Methods("POST")
-	router.HandleFunc("/register", register(env)).Methods("POST")
-	serveMux := &http.ServeMux{}
-	serveMux.Handle("/", CSRF(router))
+	serveMux := createServeMux(CSRF, env)
 	srv := &http.Server{
 		Addr:         ":8000",
 		ReadTimeout:  5 * time.Second,
@@ -196,6 +221,29 @@ func main() {
 		Handler:      serveMux,
 	}
 	log.Println(srv.ListenAndServe())
+}
+func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMux {
+	router := mux.NewRouter()
+	router.HandleFunc("/", Index)
+	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
+	router.HandleFunc("/authenticate", authenticate(env))
+	router.HandleFunc("/login", login(env)).Methods("POST")
+	router.HandleFunc("/register", register(env)).Methods("POST")
+	serveMux := &http.ServeMux{}
+	serveMux.Handle("/", CSRF(router))
+	return serveMux
+}
+func main() {
+	cfg := parseCfg()
+	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	env := Env{db: db}
+	if cfg.production {
+		startProdServer(env)
+	}
+	startDevServer(env)
 }
 func parseReaderToJson(reader io.Reader) (map[string]string, error) {
 	var dat map[string]string
