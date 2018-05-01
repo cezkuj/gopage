@@ -156,15 +156,15 @@ func TestUpdateToken(t *testing.T) {
 }
 
 func TestAuthenticateUser(t *testing.T) {
-   env := setUp()
-   token, err := env.createUser(test_user, test_user)
-  if err != nil {
-                t.Error(err)
-        }
-  want := true
-  got, err := env.authenticateUser(test_user, token)
-  if err != nil {
-                t.Error(err)
-        }
-  test(got, want, t)
+	env := setUp()
+	token, err := env.createUser(test_user, test_user)
+	if err != nil {
+		t.Error(err)
+	}
+	want := true
+	got, err := env.authenticateUser(test_user, token)
+	if err != nil {
+		t.Error(err)
+	}
+	test(got, want, t)
 }

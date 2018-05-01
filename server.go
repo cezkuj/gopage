@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -36,6 +37,25 @@ const indexHTML = `
 </html>
 `
 
+type Cfg struct {
+	mysqlHost     string
+	mysqlUser     string
+	mysqlPassword string
+	mysqlDatabase string
+	production    bool
+}
+
+func parseCfg() Cfg {
+	return Cfg{mysqlHost: getenv("MYSQL_HOST"), mysqlUser: getenv("MYSQL_USER"), mysqlPassword: getenv("MYSQL_PASSWORD"), mysqlDatabase: getenv("MYSQL_DATABASE"), production: getenv("PRODUCTION") != "0"}
+
+}
+func getenv(envVar string) string {
+	varName := os.Getenv(envVar)
+	if varName == "" {
+		log.Fatal(envVar + " is not set")
+	}
+	return varName
+}
 func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-CSRF-Token", csrf.Token(r))
@@ -146,7 +166,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, indexHTML)
 }
 func main() {
-	db, err := initDb("django:djangopass@tcp(127.0.0.1:3306)/homepage")
+	cfg := parseCfg()
+	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
 	if err != nil {
 		log.Fatal(err)
 	}
