@@ -13,7 +13,7 @@ class Index extends React.Component {
     axios.get('/authenticate')
       .then(res => {
         this.setState({csrf: res.headers['x-csrf-token']});
-        if(res.data == 'Authenticated'){
+        if(res.status == 200){
           this.setState({authenticated: true});
         }
       })

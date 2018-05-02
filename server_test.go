@@ -17,10 +17,10 @@ func TestAuthenticateWithoutCookie(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(authenticate(env))
 	handler.ServeHTTP(rr, req)
-	expected := "Not authenticated"
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+	expected := http.StatusUnauthorized
+	if rr.Code != expected {
+		t.Errorf("handler returned unexpected http code: got %v want %v",
+			rr.Code, expected)
 	}
 
 }
@@ -41,10 +41,10 @@ func TestAuthenticateWithCookie(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(authenticate(env))
 	handler.ServeHTTP(rr, req)
-	expected := "Authenticated"
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+	expected := http.StatusOK
+	if rr.Code != expected {
+		t.Errorf("handler returned unexpected http code: got %v want %v",
+			rr.Code, expected)
 	}
 
 }

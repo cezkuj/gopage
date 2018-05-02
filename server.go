@@ -64,23 +64,23 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 		username, err := r.Cookie("username")
 		if err != nil {
 			log.Println("Authentication failure due to " + err.Error())
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		token, err := r.Cookie("token")
 		if err != nil {
 			log.Println(err)
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		userPresent, err := env.userIsPresent(username.Value)
 		if err != nil {
 			log.Println(err)
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		if !userPresent {
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			log.Println("user not present", username.Value)
 			return
 
@@ -88,15 +88,14 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 		authenticated, err := env.authenticateUser(username.Value, Token(token.Value))
 		if err != nil {
 			log.Println(err)
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		if !authenticated {
-			io.WriteString(w, "Not authenticated")
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		io.WriteString(w, "Authenticated")
-
+		w.WriteHeader(http.StatusOK)
 	}
 }
 func login(env Env) func(w http.ResponseWriter, r *http.Request) {
@@ -133,6 +132,7 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 		}
 		setCookies(w, username, token)
 		io.WriteString(w, "Logging in")
+w.WriteHeader(http.StatusOK)
 
 	}
 }
@@ -160,6 +160,7 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		io.WriteString(w, "User created")
+                w.WriteHeader(http.StatusOK)
 		setCookies(w, username, token)
 
 	}
