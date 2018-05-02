@@ -7,12 +7,20 @@ class Index extends React.Component {
     this.state = {username: '', password: '', authenticated: false, csrf: ''};
   }
   componentDidMount(){
-   this.authenticate();
+   this.getToken();
+  }
+  getToken(){
+    axios.get('/getToken')
+      .then(res => {
+        this.setState({csrf: res.headers['x-csrf-token']});
+      })
+      .catch(error => {
+        console.log(error)
+      });
   }
   authenticate(){
     axios.get('/authenticate')
       .then(res => {
-        this.setState({csrf: res.headers['x-csrf-token']});
         if(res.status == 200){
           this.setState({authenticated: true});
         }

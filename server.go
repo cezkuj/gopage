@@ -58,9 +58,13 @@ func getenv(envVar string) string {
 	}
 	return varName
 }
-func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
+func getToken(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-CSRF-Token", csrf.Token(r))
+	}
+}
+func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		username, err := r.Cookie("username")
 		if err != nil {
 			log.Println("Authentication failure due to " + err.Error())
@@ -95,7 +99,6 @@ func authenticate(env Env) func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
 	}
 }
 func login(env Env) func(w http.ResponseWriter, r *http.Request) {
@@ -132,8 +135,6 @@ func login(env Env) func(w http.ResponseWriter, r *http.Request) {
 		}
 		setCookies(w, username, token)
 		io.WriteString(w, "Logging in")
-w.WriteHeader(http.StatusOK)
-
 	}
 }
 func register(env Env) func(w http.ResponseWriter, r *http.Request) {
@@ -160,9 +161,7 @@ func register(env Env) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		io.WriteString(w, "User created")
-                w.WriteHeader(http.StatusOK)
 		setCookies(w, username, token)
-
 	}
 
 }
@@ -230,6 +229,7 @@ func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMu
 	router.HandleFunc("/authenticate", authenticate(env))
 	router.HandleFunc("/login", login(env)).Methods("POST")
 	router.HandleFunc("/register", register(env)).Methods("POST")
+	router.HandleFunc("/getToken", getToken(env))
 	serveMux := &http.ServeMux{}
 	serveMux.Handle("/", CSRF(router))
 	return serveMux
