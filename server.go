@@ -235,6 +235,7 @@ func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMu
 	return serveMux
 }
 func main() {
+	startClient()
 	cfg := parseCfg()
 	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
 	if err != nil {
