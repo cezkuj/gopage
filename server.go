@@ -172,7 +172,7 @@ func startProdServer(env Env) {
 	m := &autocert.Manager{
 		Cache:      autocert.DirCache(".secret"),
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("homepage.ck.com"),
+		HostPolicy: autocert.HostWhitelist("gopage.cezkuj.com"),
 	}
 
 	tlsConfig := &tls.Config{
