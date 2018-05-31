@@ -226,7 +226,7 @@ func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMu
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
-        apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter := router.PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/authenticate", authenticate(env))
 	apiRouter.HandleFunc("/login", login(env)).Methods("POST")
 	apiRouter.HandleFunc("/register", register(env)).Methods("POST")
