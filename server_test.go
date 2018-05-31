@@ -10,7 +10,7 @@ import (
 
 func TestAuthenticateWithoutCookie(t *testing.T) {
 	env := setUp()
-	req, err := http.NewRequest("GET", "/authenticate", nil)
+	req, err := http.NewRequest("GET", "/api/authenticate", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestAuthenticateWithCookie(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req, err := http.NewRequest("GET", "/authenticate", nil)
+	req, err := http.NewRequest("GET", "/api/authenticate", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestLogin(t *testing.T) {
 		t.Fatal(err)
 	}
 	body_reader := bytes.NewReader(body)
-	req, err := http.NewRequest("POST", "/login", body_reader)
+	req, err := http.NewRequest("POST", "/api/login", body_reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	body_reader := bytes.NewReader(body)
-	req, err := http.NewRequest("POST", "/register", body_reader)
+	req, err := http.NewRequest("POST", "/api/register", body_reader)
 	if err != nil {
 		t.Fatal(err)
 	}

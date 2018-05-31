@@ -226,14 +226,16 @@ func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMu
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.PathPrefix("/js/").Handler(http.FileServer(http.Dir("assets")))
-	router.HandleFunc("/authenticate", authenticate(env))
-	router.HandleFunc("/login", login(env)).Methods("POST")
-	router.HandleFunc("/register", register(env)).Methods("POST")
-	router.HandleFunc("/getToken", getToken(env))
+        apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter.HandleFunc("/authenticate", authenticate(env))
+	apiRouter.HandleFunc("/login", login(env)).Methods("POST")
+	apiRouter.HandleFunc("/register", register(env)).Methods("POST")
+	apiRouter.HandleFunc("/getToken", getToken(env))
 	serveMux := &http.ServeMux{}
 	serveMux.Handle("/", CSRF(router))
 	return serveMux
 }
+
 func main() {
 	cfg := parseCfg()
 	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
@@ -246,6 +248,7 @@ func main() {
 	}
 	startDevServer(env)
 }
+
 func parseReaderToJson(reader io.Reader) (map[string]string, error) {
 	var dat map[string]string
 	buf := new(bytes.Buffer)
@@ -253,6 +256,7 @@ func parseReaderToJson(reader io.Reader) (map[string]string, error) {
 	err := json.Unmarshal(buf.Bytes(), &dat)
 	return dat, err
 }
+
 func setCookies(w http.ResponseWriter, username string, token Token) {
 	cookies := createCookies(username, token)
 	for _, cookie := range cookies {
@@ -264,5 +268,4 @@ func createCookies(username string, token Token) []http.Cookie {
 	nextDay := time.Now().Add(24 * time.Hour)
 	midnight := time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), 0, 0, 0, 0, nextDay.Location()) //Sets time to midnight of the next day
 	return []http.Cookie{http.Cookie{Name: "username", Value: username, Expires: midnight}, http.Cookie{Name: "token", Value: string(token), Expires: midnight}}
-
 }

@@ -10,7 +10,7 @@ class Index extends React.Component {
    this.getToken();
   }
   getToken(){
-    axios.get('/getToken')
+    axios.get('/api/getToken')
       .then(res => {
         this.setState({csrf: res.headers['x-csrf-token']});
       })
@@ -19,7 +19,7 @@ class Index extends React.Component {
       });
   }
   authenticate(){
-    axios.get('/authenticate')
+    axios.get('/api/authenticate')
       .then(res => {
         if(res.status == 200){
           this.setState({authenticated: true});
@@ -34,7 +34,7 @@ class Index extends React.Component {
     this.setState({[event.target.name]: event.target.value}); //Dynamic keys https://stackoverflow.com/questions/29280445/reactjs-setstate-with-a-dynamic-key-name
   }
   handleSend(event) {
-    axios.post('/' + event.target.name, {
+    axios.post('/api/' + event.target.name, {
         "username": this.state.username,
         "password": this.state.password,
       }, {
