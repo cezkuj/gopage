@@ -1,4 +1,4 @@
-package main
+package gopage
 
 type User struct {
 	Id       int

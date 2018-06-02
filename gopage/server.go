@@ -1,4 +1,4 @@
-package main
+package gopage
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -39,25 +38,29 @@ const indexHTML = `
 </html>
 `
 
-type Cfg struct {
-	mysqlHost     string
-	mysqlUser     string
-	mysqlPassword string
-	mysqlDatabase string
-	production    bool
+type DbCfg struct {
+	user string
+	pass string
+	host string
+	name string
 }
 
-func parseCfg() Cfg {
-	return Cfg{mysqlHost: getenv("MYSQL_HOST"), mysqlUser: getenv("MYSQL_USER"), mysqlPassword: getenv("MYSQL_PASSWORD"), mysqlDatabase: getenv("MYSQL_DATABASE"), production: getenv("PRODUCTION") != "0"}
-
+func NewDbCfg(user, pass, host, name string) DbCfg {
+	return DbCfg{user, pass, host, name}
 }
-func getenv(envVar string) string {
-	varName := os.Getenv(envVar)
-	if varName == "" {
-		log.Fatal(envVar + " is not set")
+
+func StartServer(dbCfg DbCfg, prod bool) {
+	db, err := initDb(dbCfg.user + ":" + dbCfg.pass + "@tcp(" + dbCfg.host + ")/" + dbCfg.name)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return varName
+	env := Env{db: db}
+	if prod {
+		startProdServer(env)
+	}
+	startDevServer(env)
 }
+
 func getToken(env Env) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-CSRF-Token", csrf.Token(r))
@@ -234,19 +237,6 @@ func createServeMux(CSRF func(http.Handler) http.Handler, env Env) *http.ServeMu
 	serveMux := &http.ServeMux{}
 	serveMux.Handle("/", CSRF(router))
 	return serveMux
-}
-
-func main() {
-	cfg := parseCfg()
-	db, err := initDb(cfg.mysqlUser + ":" + cfg.mysqlPassword + "@tcp(" + cfg.mysqlHost + ")/" + cfg.mysqlDatabase)
-	if err != nil {
-		log.Fatal(err)
-	}
-	env := Env{db: db}
-	if cfg.production {
-		startProdServer(env)
-	}
-	startDevServer(env)
 }
 
 func parseReaderToJson(reader io.Reader) (map[string]string, error) {

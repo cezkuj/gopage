@@ -1,4 +1,4 @@
-package main
+package gopage
 
 import "log"
 import "testing"
